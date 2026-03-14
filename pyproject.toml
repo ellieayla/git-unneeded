@@ -46,7 +46,7 @@ files = "git_unneeded.py,tests"
 
 
 [tool.ruff]
-line-length = 150
+line-length = 160
 
 [tool.ruff.lint]
 select = [
@@ -57,7 +57,7 @@ select = [
 ]
 
 [tool.ruff.lint.pycodestyle]
-max-line-length = 150
+max-line-length = 160
 max-doc-length = 300  # really long comments are OK
 
 [tool.ruff.lint.per-file-ignores]

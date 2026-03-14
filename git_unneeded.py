@@ -18,7 +18,7 @@ import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
 from collections.abc import Generator, Iterable, Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from textwrap import indent
 from typing import IO
@@ -248,7 +248,7 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
 
         if latest_commits:
             lc = latest_commits[0]
-            age_ago: timedelta = datetime.now(tz=timezone.utc) - lc.committed_datetime
+            age_ago: timedelta = datetime.now(tz=UTC) - lc.committed_datetime
             hours_ago = int(age_ago.total_seconds()/3600)
             if age_ago < timedelta(days=2):
                 yield Unsafe(
@@ -280,7 +280,7 @@ def main() -> int:
     parser.add_argument("--oneline", action="store_true", help=f"Just output directory\\t{True}. Implies --quiet.")
     parser.add_argument("--skip-unknown-directories", action="store_true", help="If a passed directory isn't a git repo, skip it. Not considered a failure.")
     parser.add_argument("--no-fetch", dest="fetch_remotes", action="store_false", help="Don't connect to any configured remotes. Local cache might be old.")
-    parser.add_argument("--no-search-parent", dest="search_parent_directories", action="store_false", help="Normally search parents for .git. If set, fail instead.")
+    parser.add_argument("--no-search-parent", dest="search_parent_directories", action="store_false", help="Don't search up parent directories for .git.")
 
     args: Namespace = parser.parse_args()
 
