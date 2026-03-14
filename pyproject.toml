@@ -1,0 +1,66 @@
+[project]
+name = "gh-unneeded"
+version = "1.0.0"
+description = "Determine whether we don't need this clone (or some of its branches) anymore."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+"gitpython>=3.1.46",
+]
+
+[project.scripts]
+git-fork = "git_unneeded:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "pytest-mypy>=1.0.1",
+]
+readme = [
+    "cogapp>=3.6.0",
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--mypy --failed-first"
+#strict_xfail = true
+
+[tool.mypy]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_unreachable = true
+show_error_codes = true
+warn_return_any = true
+disallow_untyped_defs = true
+
+files = "git_unneeded.py,tests"
+
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint]
+select = [
+    "I",  # import sort
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 150
+max-doc-length = 300  # really long comments are OK
+
+[tool.ruff.lint.per-file-ignores]
+"test_*.py" = ["E501"]
+
+# uv tool run pytest-watcher -sv .
+[tool.pytest-watcher]
+now = true
+clear = true
+notify_on_failure = false
+delay = 0.2
+runner = ".venv/bin/pytest"
+patterns = ["*.py"]
+ignore_patterns = []
