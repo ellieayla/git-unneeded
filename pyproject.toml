@@ -3,13 +3,20 @@ name = "gh-unneeded"
 version = "1.0.0"
 description = "Determine whether we don't need this clone (or some of its branches) anymore."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
-"gitpython>=3.1.46",
+    "gitpython>=3.1.46",
 ]
 
 [project.scripts]
 git-fork = "git_unneeded:main"
+
+[build-system]
+requires = ["setuptools >= 80.0", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["git_unneeded"]
 
 [dependency-groups]
 dev = [
@@ -32,6 +39,7 @@ warn_unused_ignores = true
 warn_unreachable = true
 show_error_codes = true
 warn_return_any = true
+disallow_any_generics = true
 disallow_untyped_defs = true
 
 files = "git_unneeded.py,tests"

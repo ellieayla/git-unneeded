@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --script
 # /// script
-# requires-python = ">=3.14"
+# requires-python = ">=3.12"
 # dependencies = [
 #     "gitpython>=3.1.46",
 # ]
@@ -17,8 +17,9 @@ import os
 import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
-from collections.abc import Iterable, Generator, Sequence
+from collections.abc import Generator, Iterable, Sequence
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from textwrap import indent
 from typing import IO
 
@@ -132,10 +133,10 @@ def is_main_branch(branch: git.Head) -> bool:
 
 
 def describe_commit_one_line(c: git.Commit) -> str:
-    return f"{c.hexsha} {c.committed_datetime} {c.committer}: {c.summary}"
+    return f"{c.hexsha} {c.committed_datetime} {c.committer}: {str(c.summary)}"
 
 
-def repository_safe_to_delete(repo: git.Repo, fetch=True) -> Generator[Safe | Unsafe, None, None]:
+def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[Safe | Unsafe, None, None]:
     repo_logger = logger.getChild(str(repo.git_dir))
 
     repo_logger.debug("starting vvvv")
@@ -265,15 +266,21 @@ def repository_safe_to_delete(repo: git.Repo, fetch=True) -> Generator[Safe | Un
     repo_logger.debug("finished ^^^^")
 
 
+def print_if_not_quiet(value: str, quiet: bool) -> None:
+    if not quiet:
+        return print(value)
+
+
 def main() -> int:
-    parser = ArgumentParser()
+    parser = ArgumentParser(suggest_on_error=True)
     parser.add_argument("directory", nargs="*", default=["."], help="GIT_DIR. Default current directory.")
     parser.add_argument("--color", choices=("never", "always", "auto"), default="auto")
     parser.add_argument("--debug", action="store_true", help="Exact git commands and decisions.")
     parser.add_argument("--quiet", "-q", "-s", action="store_true", help="Just safe/not, no justification.")
+    parser.add_argument("--oneline", action="store_true", help=f"Just output directory\\t{True}. Implies --quiet.")
     parser.add_argument("--skip-unknown-directories", action="store_true", help="If a passed directory isn't a git repo, skip it. Not considered a failure.")
     parser.add_argument("--no-fetch", dest="fetch_remotes", action="store_false", help="Don't connect to any configured remotes. Local cache might be old.")
-    parser.add_argument("--no-search-parent", dest="search_parent_directories", action="store_false", help="Normally search parent for .git. If set, fail instead.")
+    parser.add_argument("--no-search-parent", dest="search_parent_directories", action="store_false", help="Normally search parents for .git. If set, fail instead.")
 
     args: Namespace = parser.parse_args()
 
@@ -287,14 +294,14 @@ def main() -> int:
 
     exit_code = 0
 
-    def p(*_args, **_kwargs):
-        """Print only if not quiet."""
-        if not args.quiet:
-            print(*_args, **_kwargs)
+    if args.oneline:
+        args.quiet = True
 
+    p = partial(print_if_not_quiet, quiet=args.quiet)
 
     repo_objects: list[git.Repo] = []
     repo_directory: os.PathLike[str]
+
     for repo_directory in args.directory:
         try:
             repo_objects.append(
@@ -305,14 +312,16 @@ def main() -> int:
                 logger.warning(f"{repo_directory}: .git not found. Skipping.")
                 continue
             parser.error(f"{repo_directory}: .git not found. Run from inside a cloned repository or pass on command-line.")
-    
+
+    need_newline_before_heading = False
+
     for repo in repo_objects:
         safe_to_delete_repo = True
-
-        assert repo
         simple_repo_pathname: git.PathLike = repo.working_dir or repo.git_dir
 
-        print(f"{Colors.BOLD}{simple_repo_pathname}{Colors.RESET}")
+        if not args.oneline:
+            print(f"{'\n' if need_newline_before_heading else ''}{Colors.BOLD}{simple_repo_pathname}{Colors.RESET}")
+            need_newline_before_heading = True
 
         with repo: # cleanup open files
             reasons = repository_safe_to_delete(repo, fetch=args.fetch_remotes)
@@ -326,12 +335,11 @@ def main() -> int:
 
         p("")  # add a newline if not quiet
 
-        if safe_to_delete_repo:
-            print(f"It's safe to delete repo directory: {simple_repo_pathname}")
+        if args.oneline:
+            print(f"{simple_repo_pathname}\t{safe_to_delete_repo}")
         else:
-            print(f"Not safe to delete repo: {simple_repo_pathname}")
+            print(f"{'It\'s' if safe_to_delete_repo else 'Not'} safe to delete repo directory: {simple_repo_pathname}")
 
-        print()
     return exit_code
 
 if __name__ == "__main__":
