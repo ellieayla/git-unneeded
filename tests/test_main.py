@@ -1,21 +1,16 @@
-from collections.abc import Iterable
-from contextlib import AbstractContextManager, contextmanager, nullcontext
-
-from dataclasses import dataclass
-from inspect import isclass
-from itertools import tee
-from multiprocessing import Value
-from typing import cast
 import sys
-import logging
+from collections.abc import Iterable
+from contextlib import nullcontext
+from dataclasses import dataclass
+from itertools import tee
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
 import pytest
-import git_unneeded
-
 from git import PathLike, Repo
-from git.exc import InvalidGitRepositoryError
+
+import git_unneeded
 
 
 @dataclass

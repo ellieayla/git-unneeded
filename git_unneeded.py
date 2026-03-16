@@ -12,18 +12,16 @@ Determine whether we don't need this clone (or some of its branches) anymore.
 If a branch has been pushed/merged, we don't need to keep it.
 """
 
-from dataclasses import dataclass, field
 import logging
-from operator import is_
 import os
-import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Generator, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from textwrap import indent
-from typing import IO, Self
+from typing import IO
 
 import git
 

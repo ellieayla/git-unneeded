@@ -1,10 +1,10 @@
 
-from collections.abc import Iterable, Generator
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from unittest import mock
 
 import pytest
-from git import Repo, RemoteReference
+from git import Repo
 from git.cmd import Git
 
 import git_unneeded

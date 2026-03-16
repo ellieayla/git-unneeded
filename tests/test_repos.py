@@ -1,14 +1,11 @@
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import select
-from threading import local
-from zoneinfo import ZoneInfo
 
-from git_unneeded import Safe, Unsafe, repository_safe_to_delete
 from git import Repo
 
 import git_unneeded
+from git_unneeded import Safe, Unsafe, repository_safe_to_delete
 
 
 def test_repo_has_dirty_working_directory(temp_repo: Repo) -> None:
