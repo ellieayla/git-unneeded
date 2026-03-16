@@ -91,7 +91,7 @@ def cloned_repo(tmp_path: Path) -> Iterable[Repo]:
         f.write("file 2 content")
 
     repo.index.add(items=[file_2_path]) # pyright: ignore[reportUnknownMemberType]
-    second_commit = repo.index.commit(message="commit 2", parent_commits=[first_commit])
+    repo.index.commit(message="commit 2", parent_commits=[first_commit])
     print_repo_details_at_cleanup(repo)
     #new_branch_b = repo.create_head("new-b", commit=second_commit.hexsha)
     #repo.head.reference = new_branch_b
