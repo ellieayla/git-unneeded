@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 
-from git_unneeded import Safe, Unsafe, git, print_if_not_quiet
+from git_unneeded import Colors, Safe, Unsafe, git, print_if_not_quiet
 
 
 @dataclass
@@ -52,3 +52,30 @@ def test_unsafe(fake_repo_object: FakeRepo, suggestions: list[str], repo_path_in
     assert "reason" in r
 
     assert all([" => " + s in r for s in suggestions])
+
+
+def test_colors_balanced() -> None:
+    fake_repo_object = FakeRepo(working_dir="aaa")
+    repo = cast(git.Repo, fake_repo_object)
+
+    text = Unsafe(repo, "reason name", ["s5", "s6"]).format()
+
+    assert "\n" in text
+
+    stack = 0
+    
+    pos = 5
+    print(f"{text=}")
+    for offset, character in enumerate(text):
+        pos += 1
+        if character == "\x1b":
+            pos += 3
+            print(" " * pos, "^", sep="", end=" - ")
+            if text[offset:].startswith(Colors.RESET):
+                print("Down")
+                stack -= 1
+            else:
+                print("Up")
+                stack += 1
+    
+    assert stack == 0

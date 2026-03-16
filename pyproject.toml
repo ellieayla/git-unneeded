@@ -22,6 +22,7 @@ py-modules = ["git_unneeded"]
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
     "pytest-mypy>=1.0.1",
 ]
 readme = [
@@ -30,8 +31,12 @@ readme = [
 
 
 [tool.pytest.ini_options]
-addopts = "--mypy --failed-first"
-#strict_xfail = true
+addopts = "--last-failed --mypy --cov --no-cov-on-fail --failed-first"
+strict_xfail = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
 
 [tool.mypy]
 check_untyped_defs = true

@@ -12,7 +12,9 @@ Determine whether we don't need this clone (or some of its branches) anymore.
 If a branch has been pushed/merged, we don't need to keep it.
 """
 
+from dataclasses import dataclass, field
 import logging
+from operator import is_
 import os
 import subprocess
 import sys
@@ -21,7 +23,7 @@ from collections.abc import Generator, Iterable, Sequence
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from textwrap import indent
-from typing import IO
+from typing import IO, Self
 
 import git
 
@@ -65,47 +67,15 @@ class Colors:
             return hasattr(file, "isatty") and file.isatty()
 
 
-def find_my_fork(repo: git.Repo, mine: list[str]) -> git.Remote:
-    for remote in repo.remotes:
-        for url in remote.urls:
-            for m in mine:
-                logger.debug(f"Checking {remote.name=} {url=} vs {m=}")
-                if url.startswith(m):
-                    return remote
-
-    raise ValueError("No remote configured matching my prefixes.")
-
-
-class EnvDefaultList(list[str]):
-    name: str
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.extend([x for x in os.environ.get(self.name, "").split(",") if x.strip()])
-
-    def __str__(self) -> str:
-        return f"env:{self.name} (currently {list(iter(self))})"
-
-
-def get_mine_from_gh() -> Iterable[str]:
-
-    assumed_host_prefixes = [
-        "https://github.com/",
-        "git@github.com:",
-    ]
-    cache = ["--cache", "100h"]
-    k = subprocess.check_output(["gh", "api", "/user/orgs", "--jq", ".[].login", *cache], text=True).splitlines()
-    yield from [f"{host}{org}" for host in assumed_host_prefixes for org in k]
-
-    j = subprocess.check_output(["gh", "api", "/user", "--jq", ".login", *cache], text=True).splitlines()
-    yield from [f"{host}{user}" for host in assumed_host_prefixes for user in j]
-
-
+@dataclass
 class Safe:
-    _major_color = Colors.GREEN
-    repo_path: git.PathLike
+    repo_path: git.PathLike = field(repr=False, hash=False, compare=False)
     reason: str
     suggestions: Sequence[str]
+
+    @property
+    def _major_color(self) -> str:
+        return Colors.GREEN
 
     def __init__(self, repo: git.Repo, reason: str, suggestions: Sequence[str] = ()) -> None:
         if repo.working_dir:
@@ -116,16 +86,27 @@ class Safe:
         self.suggestions = suggestions
 
     def format(self, with_repo: bool = False) -> str:
-        repo_chunk = f" - {Colors.RESET} - {self.repo_path}" if with_repo else ""
+        repo_chunk = f" - {self.repo_path}" if with_repo else ""
         return "\n".join([
             f"{self._major_color}{self.__class__.__name__}{Colors.RESET}{Colors.BOLD}:{Colors.RESET} {self.reason}{repo_chunk}"
-        ] + [f"{Colors.RESET}  => {suggestion}{Colors.RESET}" for suggestion in self.suggestions])
+        ] + [f"  => {suggestion}" for suggestion in self.suggestions])
 
     def __str__(self) -> str:
         return self.format()
 
+
 class Unsafe(Safe):
-    _major_color = Colors.BOLD_RED
+    @property
+    def _major_color(self) -> str:
+        return Colors.GREEN
+
+
+def prune_probability_key(branch: git.Head) -> int:
+    if is_main_branch(branch):
+        return 2
+    if branch.tracking_branch():
+        return 1
+    return 0
 
 
 def is_main_branch(branch: git.Head) -> bool:
@@ -159,13 +140,13 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
 
     pretend_deleted_local_branches: list[git.Head] = []
 
-    for subject_branch in repo.branches:
-
+    for subject_branch in sorted(repo.branches, key=prune_probability_key):  # sort main last
+        repo_logger.debug(f"Considering {subject_branch=} for pretend-deletion")
         if is_main_branch(subject_branch):
             # special case two branches we probably never want to consider "branched"
             continue
 
-        for possibly_merged_into_branch in sorted(repo.branches, key=is_main_branch, reverse=True):  # sort main first
+        for possibly_merged_into_branch in sorted(repo.branches, key=prune_probability_key, reverse=True):  # sort main first
             if subject_branch == possibly_merged_into_branch:
                 continue  # that's us, skip
 
@@ -241,8 +222,8 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
                 ]
             )
         try:
-            latest_commits = list(repo.iter_commits(rev=b, since="2.days.ago", date_order=True, max_count=5))
-        except ValueError:
+            latest_commits = list(repo.iter_commits(rev=b, since="7.days.ago", date_order=True, max_count=5))
+        except ValueError:  # pragma: no cover
             # does not have any commits yet
             latest_commits = []
 
@@ -272,12 +253,12 @@ def print_if_not_quiet(value: str, quiet: bool) -> None:
 
 
 def main() -> int:
-    parser = ArgumentParser(suggest_on_error=True)
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument("directory", nargs="*", default=["."], help="GIT_DIR. Default current directory.")
     parser.add_argument("--color", choices=("never", "always", "auto"), default="auto")
     parser.add_argument("--debug", action="store_true", help="Exact git commands and decisions.")
     parser.add_argument("--quiet", "-q", "-s", action="store_true", help="Just safe/not, no justification.")
-    parser.add_argument("--oneline", action="store_true", help=f"Just output directory\\t{True}. Implies --quiet.")
+    parser.add_argument("--oneline", action="store_true", help=f"Just output directory\\0{True}. Implies --quiet.")
     parser.add_argument("--skip-unknown-directories", action="store_true", help="If a passed directory isn't a git repo, skip it. Not considered a failure.")
     parser.add_argument("--no-fetch", dest="fetch_remotes", action="store_false", help="Don't connect to any configured remotes. Local cache might be old.")
     parser.add_argument("--no-search-parent", dest="search_parent_directories", action="store_false", help="Don't search up parent directories for .git.")
@@ -336,11 +317,11 @@ def main() -> int:
         p("")  # add a newline if not quiet
 
         if args.oneline:
-            print(f"{simple_repo_pathname}\t{safe_to_delete_repo}")
+            print(f"{simple_repo_pathname}\0{safe_to_delete_repo}")
         else:
             print(f"{'It\'s' if safe_to_delete_repo else 'Not'} safe to delete repo directory: {simple_repo_pathname}")
 
     return exit_code
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
