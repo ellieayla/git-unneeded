@@ -16,6 +16,7 @@ import git_unneeded
 @dataclass
 class FakeRepo:
     """Minimal git.Repo object with properties for printing."""
+
     working_dir: PathLike | None = None
     git_dir: PathLike | None = None
 
@@ -29,7 +30,7 @@ def mocked_repository_safe_to_delete() -> Iterable[mock.Mock]:
 def main(*args: str | Path | PathLike | None) -> int:
     """
     Mock sys.argv with passed arguments (dropping None), and call git_unneeded.main().
-    
+
     Pass any returned value or thrown exception back up to caller.
     """
 
@@ -57,13 +58,7 @@ def assert_same_as[T](value: T, iterable: Iterable[T]) -> None:
 
 
 @pytest.mark.xfail(strict=True)
-@pytest.mark.parametrize(
-    ("value", "not_that"),
-    [
-        (True, False),
-        (False, 5)
-    ]
-)
+@pytest.mark.parametrize(("value", "not_that"), [(True, False), (False, 5)])
 def test_verify_assert_same_as_helper_fn(value: bool | int, not_that: bool | int) -> None:
     assert_same_as(value, [not_that])
 
@@ -106,9 +101,7 @@ def test_color_switches(temp_repo: Repo, color_on: bool, capsys: pytest.CaptureF
     out, err = capsys.readouterr()
     assert "" == err
 
-    assert_same_as(color_on, [
-        reset_string in out
-    ])
+    assert_same_as(color_on, [reset_string in out])
 
 
 def test_color_autodetection_of_tty(tmp_path: Path, mocked_repository_safe_to_delete: mock.Mock) -> None:
@@ -122,22 +115,25 @@ def test_color_autodetection_of_tty(tmp_path: Path, mocked_repository_safe_to_de
     assert git_unneeded.Colors.RESET == ""
 
 
-@pytest.mark.parametrize("setenv, color_enabled", [
-    (("NO_COLOR", "1"), False),
-    (("FORCE_COLOR", "1"), True),
-    (("TERM", "dumb"), False),
-])
-def test_color_automatically_disabled_if_env_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, setenv: tuple[str,str], color_enabled: bool, mocked_repository_safe_to_delete: mock.Mock) -> None:
-    
+@pytest.mark.parametrize(
+    "setenv, color_enabled",
+    [
+        (("NO_COLOR", "1"), False),
+        (("FORCE_COLOR", "1"), True),
+        (("TERM", "dumb"), False),
+    ],
+)
+def test_color_automatically_disabled_if_env_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, setenv: tuple[str, str], color_enabled: bool, mocked_repository_safe_to_delete: mock.Mock
+) -> None:
+
     with monkeypatch.context() as m:
         m.setenv(name=setenv[0], value=setenv[1])
         with mock.patch("sys.stdout", spec=sys.stdout):
             main(str(tmp_path), "--color", "auto", "--skip-unknown-directories")
 
     # main called Colors.disable()
-    assert_same_as(color_enabled, [
-        git_unneeded.Colors.RESET != ""
-    ])
+    assert_same_as(color_enabled, [git_unneeded.Colors.RESET != ""])
 
 
 @pytest.mark.parametrize("debug_logging_on", (True, False))
@@ -151,28 +147,29 @@ def test_quiet_switch(temp_repo: Repo, quiet_mode_on: bool, capsys: pytest.Captu
     """Print reasons only when not in quiet mode."""
 
     mocked_repository_safe_to_delete.return_value = [
-        git_unneeded.Safe(
-            temp_repo, "justifications do not appear in quiet mode", ["suggestions do not appear either"]
-        )
+        git_unneeded.Safe(temp_repo, "justifications do not appear in quiet mode", ["suggestions do not appear either"])
     ]
 
     assert 0 == main(str(temp_repo.working_dir), "--quiet" if quiet_mode_on else None)
 
     out, _err = capsys.readouterr()
 
-    assert_same_as(quiet_mode_on, [
-        "justifications do not appear in quiet mode" not in out,
-        "suggestions do not appear either" not in out,
-    ])
+    assert_same_as(
+        quiet_mode_on,
+        [
+            "justifications do not appear in quiet mode" not in out,
+            "suggestions do not appear either" not in out,
+        ],
+    )
 
 
 @pytest.mark.parametrize("one_line_output_mode_on", (True, False))
-def test_one_line_output_switch(temp_repo: Repo, one_line_output_mode_on: bool, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock) -> None:
+def test_one_line_output_switch(
+    temp_repo: Repo, one_line_output_mode_on: bool, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock
+) -> None:
 
     mocked_repository_safe_to_delete.return_value = [
-        git_unneeded.Safe(
-            temp_repo, "justifications do not appear in oneline mode", ["suggestions do not appear either"]
-        )
+        git_unneeded.Safe(temp_repo, "justifications do not appear in oneline mode", ["suggestions do not appear either"])
     ]
 
     assert 0 == main(str(temp_repo.working_dir), "--oneline" if one_line_output_mode_on else None)
@@ -184,7 +181,7 @@ def test_one_line_output_switch(temp_repo: Repo, one_line_output_mode_on: bool, 
         [
             "justifications do not appear in oneline mode" not in out,
             out == f"{temp_repo.working_dir}\0True\n",
-        ]
+        ],
     )
 
 
@@ -200,11 +197,12 @@ def test_skip_unknown_directories(tmp_path: Path, ignore_missing_dir_on: bool) -
 
 
 @pytest.mark.parametrize("search_parent_directories_on", (True, False))
-def test_search_parent_directories(temp_repo: Repo, search_parent_directories_on: bool, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock) -> None:
+def test_search_parent_directories(
+    temp_repo: Repo, search_parent_directories_on: bool, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock
+) -> None:
     working_dir = Path(temp_repo.working_dir)
     subdir = working_dir / "subdir"
     subdir.mkdir()
-
 
     if search_parent_directories_on:
         assert 0 == main(str(subdir))
@@ -229,12 +227,10 @@ def test_no_fetch(temp_repo: Repo, no_fetch_switch: bool, mocked_repository_safe
     assert mocked_repository_safe_to_delete.call_args.kwargs.get("fetch") is not no_fetch_switch
 
 
-def test_unsafe_to_delete_repo_shows_reasons_and_exits_1(temp_repo: Repo, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock) -> None:
-    mocked_repository_safe_to_delete.return_value = [
-        git_unneeded.Unsafe(
-            temp_repo, "justifications", ["suggestions"]
-        )
-    ]
+def test_unsafe_to_delete_repo_shows_reasons_and_exits_1(
+    temp_repo: Repo, capsys: pytest.CaptureFixture[str], mocked_repository_safe_to_delete: mock.Mock
+) -> None:
+    mocked_repository_safe_to_delete.return_value = [git_unneeded.Unsafe(temp_repo, "justifications", ["suggestions"])]
 
     assert 1 == main(str(temp_repo.working_dir), "--color=never")
     out, err = capsys.readouterr()
@@ -256,4 +252,3 @@ def test_iterate_over_multiple_repos(tmp_path: Path, capsys: pytest.CaptureFixtu
 
     # both repos checked
     assert 2 == mocked_repository_safe_to_delete.call_count
-

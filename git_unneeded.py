@@ -85,9 +85,10 @@ class Safe:
 
     def format(self, with_repo: bool = False) -> str:
         repo_chunk = f" - {self.repo_path}" if with_repo else ""
-        return "\n".join([
-            f"{self._major_color}{self.__class__.__name__}{Colors.RESET}{Colors.BOLD}:{Colors.RESET} {self.reason}{repo_chunk}"
-        ] + [f"  => {suggestion}" for suggestion in self.suggestions])
+        return "\n".join(
+            [f"{self._major_color}{self.__class__.__name__}{Colors.RESET}{Colors.BOLD}:{Colors.RESET} {self.reason}{repo_chunk}"]
+            + [f"  => {suggestion}" for suggestion in self.suggestions]
+        )
 
     def __str__(self) -> str:
         return self.format()
@@ -108,7 +109,7 @@ def prune_probability_key(branch: git.Head) -> int:
 
 
 def is_main_branch(branch: git.Head) -> bool:
-    return branch.path in ('refs/heads/main', 'refs/heads/master')
+    return branch.path in ("refs/heads/main", "refs/heads/master")
 
 
 def describe_commit_one_line(c: git.Commit) -> str:
@@ -121,14 +122,10 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
     repo_logger.debug("starting vvvv")
     if repo.is_dirty(untracked_files=True, working_tree=True, index=True):
         if repo.untracked_files:
-            yield Unsafe(
-                repo,
-                "Untracked files in working directory",
-                repo.untracked_files[:10]
-            )
+            yield Unsafe(repo, "Untracked files in working directory", repo.untracked_files[:10])
         else:
             yield Unsafe(repo, "Repo is dirty.", ("Run git status for details.",))
-    
+
     if fetch:
         for r in repo.remotes:
             # fetch up to date information for each remote.
@@ -160,7 +157,7 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
                     [
                         f"git branch --points-at {possibly_merged_into_branch.name}",
                         f"git branch --verbose -d {subject_branch.name}",
-                    ]
+                    ],
                 )
                 pretend_deleted_local_branches.append(subject_branch)
                 break
@@ -169,7 +166,6 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
         repo_logger.debug(f"{pretend_deleted_local_branches=}")
 
     for b in repo.branches:
-
         bl = repo_logger.getChild(f"branch={b.name}")
 
         tracking_branch = b.tracking_branch()
@@ -179,7 +175,7 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
                 yield Unsafe(
                     repo,
                     f"Local branch {b.name} is not known to remotes, and has commits.",
-                    [r.url for r in repo.remotes] + [describe_commit_one_line(b.commit)]
+                    [r.url for r in repo.remotes] + [describe_commit_one_line(b.commit)],
                 )
             continue
 
@@ -204,21 +200,11 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
             yield Unsafe(
                 repo,
                 f"Local branch {b.path} has commits that {tracking_branch.path} lacks.",
-                [
-                    f"git log {tracking_branch.path}..{b.path}"
-                ] + [
-                    describe_commit_one_line(c) for c in we_have_commits_remote_doesnt_have
-                ]
+                [f"git log {tracking_branch.path}..{b.path}"] + [describe_commit_one_line(c) for c in we_have_commits_remote_doesnt_have],
             )
         elif not is_main_branch(b):
             # don't bother saying that main could be deleted
-            yield Safe(
-                repo,
-                f"Local branch {b.path} is behind {tracking_branch.path}.",
-                [
-                    f"git branch --all --contains {b.commit}"
-                ]
-            )
+            yield Safe(repo, f"Local branch {b.path} is behind {tracking_branch.path}.", [f"git branch --all --contains {b.commit}"])
         try:
             latest_commits = list(repo.iter_commits(rev=b, since="7.days.ago", date_order=True, max_count=5))
         except ValueError:  # pragma: no cover
@@ -228,18 +214,14 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
         if latest_commits:
             lc = latest_commits[0]
             age_ago: timedelta = datetime.now(tz=UTC) - lc.committed_datetime
-            hours_ago = int(age_ago.total_seconds()/3600)
+            hours_ago = int(age_ago.total_seconds() / 3600)
             if age_ago < timedelta(days=2):
                 yield Unsafe(
-                    repo,
-                    f"Branch {b} might be active - last commit was {hours_ago} hours ago.",
-                    [describe_commit_one_line(c) for c in latest_commits]
+                    repo, f"Branch {b} might be active - last commit was {hours_ago} hours ago.", [describe_commit_one_line(c) for c in latest_commits]
                 )
             else:
                 yield Safe(
-                    repo,
-                    f"Branch {b} might be inactive - last commit was {hours_ago} hours ago.",
-                    [describe_commit_one_line(c) for c in latest_commits]
+                    repo, f"Branch {b} might be inactive - last commit was {hours_ago} hours ago.", [describe_commit_one_line(c) for c in latest_commits]
                 )
 
     repo_logger.debug("finished ^^^^")
@@ -283,9 +265,7 @@ def main() -> int:
 
     for repo_directory in args.directory:
         try:
-            repo_objects.append(
-                git.Repo(repo_directory, search_parent_directories=args.search_parent_directories)
-            )
+            repo_objects.append(git.Repo(repo_directory, search_parent_directories=args.search_parent_directories))
         except git.InvalidGitRepositoryError:
             if args.skip_unknown_directories:
                 logger.warning(f"{repo_directory}: .git not found. Skipping.")
@@ -302,7 +282,7 @@ def main() -> int:
             print(f"{'\n' if need_newline_before_heading else ''}{Colors.BOLD}{simple_repo_pathname}{Colors.RESET}")
             need_newline_before_heading = True
 
-        with repo: # cleanup open files
+        with repo:  # cleanup open files
             reasons = repository_safe_to_delete(repo, fetch=args.fetch_remotes)
 
         for reason in reasons:
@@ -317,9 +297,10 @@ def main() -> int:
         if args.oneline:
             print(f"{simple_repo_pathname}\0{safe_to_delete_repo}")
         else:
-            print(f"{'It\'s' if safe_to_delete_repo else 'Not'} safe to delete repo directory: {simple_repo_pathname}")
+            print(f"{"It's" if safe_to_delete_repo else 'Not'} safe to delete repo directory: {simple_repo_pathname}")
 
     return exit_code
+
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

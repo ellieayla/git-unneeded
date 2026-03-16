@@ -13,7 +13,6 @@ class FakeRepo:
     git_dir: git.PathLike | None = None
 
 
-
 def test_print_if_quiet(capsys: pytest.CaptureFixture[str]) -> None:
     p = partial(print_if_not_quiet, quiet=True)
     p("111")
@@ -63,7 +62,7 @@ def test_colors_balanced() -> None:
     assert "\n" in text
 
     stack = 0
-    
+
     pos = 5
     print(f"{text=}")
     for offset, character in enumerate(text):
@@ -77,5 +76,5 @@ def test_colors_balanced() -> None:
             else:
                 print("Up")
                 stack += 1
-    
+
     assert stack == 0

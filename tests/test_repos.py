@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from git_unneeded import Safe, Unsafe, repository_safe_to_delete
 
 def test_repo_has_dirty_working_directory(temp_repo: Repo) -> None:
     working_directory = Path(temp_repo.working_dir)
-    
+
     with open(working_directory / "newfile", "x") as f:
         f.write("newfile")
 
@@ -31,7 +30,7 @@ def test_repo_has_dirty_index(temp_repo: Repo) -> None:
     with open(new_file_path, "x") as f:
         f.write("newfile")
 
-    temp_repo.index.add(items=[new_file_path]) # pyright: ignore[reportUnknownMemberType]
+    temp_repo.index.add(items=[new_file_path])  # pyright: ignore[reportUnknownMemberType]
 
     reasons = list(repository_safe_to_delete(temp_repo))
     assert len(reasons) == 1
@@ -50,7 +49,7 @@ def test_repo_is_up_to_date_with_remote(cloned_repo: Repo) -> None:
 
 
 def test_repo_with_extra_empty_branch_generates_one_safe(cloned_repo: Repo) -> None:
-    
+
     branch_c = cloned_repo.create_head("new-c", commit=cloned_repo.active_branch.commit.hexsha)
     # not checked out, otherwise delete_head() will fail later
 
@@ -72,14 +71,14 @@ def test_repo_with_extra_empty_branch_generates_one_safe(cloned_repo: Repo) -> N
 
 def test_repo_with_extra_new_commit_generates_two_unsafe(cloned_repo: Repo) -> None:
     working_directory = Path(cloned_repo.working_dir)
-    
+
     a_file = working_directory / "a.txt"
     with open(a_file, "x") as f:
         f.write("aaaa")
 
-    cloned_repo.index.add(items=[a_file]) # pyright: ignore[reportUnknownMemberType]
+    cloned_repo.index.add(items=[a_file])  # pyright: ignore[reportUnknownMemberType]
     a_commit = cloned_repo.index.commit(message="test commit")
-    
+
     reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
     assert len(reasons) == 2
 
@@ -94,7 +93,7 @@ def test_repo_with_extra_new_commit_generates_two_unsafe(cloned_repo: Repo) -> N
     assert "might be active" in active_reason.reason
 
     # but it's ok after pushing that branch
-    assert cloned_repo.active_branch.tracking_branch()    
+    assert cloned_repo.active_branch.tracking_branch()
     cloned_repo.remotes[0].push(refspec="refs/heads/new-b:refs/heads/new-b", verbose=True)
 
     reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
@@ -112,7 +111,7 @@ def test_repo_inactive_last_commit_old_and_behind_remote(cloned_repo: Repo) -> N
     Our local branch is now behind the upstream.
     """
 
-    backdated_commit = cloned_repo.index.commit(message="backdated commit", commit_date=datetime.now(tz=UTC)-timedelta(days=3))
+    backdated_commit = cloned_repo.index.commit(message="backdated commit", commit_date=datetime.now(tz=UTC) - timedelta(days=3))
     _someone_else_made_this = cloned_repo.index.commit(message="someone else made a commit")
 
     assert cloned_repo.active_branch.tracking_branch()
@@ -137,7 +136,7 @@ def test_local_branch_unknown_to_remote(cloned_repo: Repo) -> None:
     h = cloned_repo.create_head("refs/heads/localbranch", commit=cloned_repo.active_branch.commit)
     h.checkout()
 
-    local_commit = cloned_repo.index.commit(message="local commit", commit_date=datetime.now(tz=UTC)-timedelta(days=3))
+    local_commit = cloned_repo.index.commit(message="local commit", commit_date=datetime.now(tz=UTC) - timedelta(days=3))
 
     reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
 

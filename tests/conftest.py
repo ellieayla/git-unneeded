@@ -1,4 +1,3 @@
-
 from collections.abc import Generator, Iterable
 from pathlib import Path
 from unittest import mock
@@ -10,8 +9,7 @@ from git.cmd import Git
 import git_unneeded
 
 
-class MockedColors(git_unneeded.Colors):
-    ...
+class MockedColors(git_unneeded.Colors): ...
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +38,7 @@ def print_repo_details_at_cleanup(repo: Repo) -> None:
     working_dir = Path(repo.working_dir)
     for filename in working_dir.iterdir():
         print(f"  {filename.relative_to(working_dir)}")
-    
+
     if repo.heads:
         print("Commits:")
         for x in repo.iter_commits(all=True):
@@ -80,9 +78,9 @@ def cloned_repo(tmp_path: Path) -> Iterable[Repo]:
     with open(new_file_path, "x") as f:
         f.write("file content")
 
-    repo.index.add(items=[new_file_path]) # pyright: ignore[reportUnknownMemberType]
+    repo.index.add(items=[new_file_path])  # pyright: ignore[reportUnknownMemberType]
     first_commit = repo.index.commit(message="first commit")
-    
+
     new_branch_b = repo.create_head("new-b", commit=first_commit.hexsha)
     new_branch_b.checkout()
 
@@ -90,11 +88,11 @@ def cloned_repo(tmp_path: Path) -> Iterable[Repo]:
     with open(file_2_path, "x") as f:
         f.write("file 2 content")
 
-    repo.index.add(items=[file_2_path]) # pyright: ignore[reportUnknownMemberType]
+    repo.index.add(items=[file_2_path])  # pyright: ignore[reportUnknownMemberType]
     repo.index.commit(message="commit 2", parent_commits=[first_commit])
     print_repo_details_at_cleanup(repo)
-    #new_branch_b = repo.create_head("new-b", commit=second_commit.hexsha)
-    #repo.head.reference = new_branch_b
+    # new_branch_b = repo.create_head("new-b", commit=second_commit.hexsha)
+    # repo.head.reference = new_branch_b
 
     # switch back to main branch
     original_branch.checkout()
@@ -103,7 +101,6 @@ def cloned_repo(tmp_path: Path) -> Iterable[Repo]:
     clone_path.mkdir()
 
     clone = Repo.clone_from(url=upstream_path, to_path=clone_path)
-
 
     # set up tracking for all branches
     for remote_branch in repo.branches:
