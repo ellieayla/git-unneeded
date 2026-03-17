@@ -1,5 +1,5 @@
 [project]
-name = "gh-unneeded"
+name = "git-unneeded"
 version = "1.0.0"
 description = "Determine whether we don't need this clone (or some of its branches) anymore."
 readme = "README.md"
