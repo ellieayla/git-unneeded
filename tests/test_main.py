@@ -233,7 +233,7 @@ def test_unsafe_to_delete_repo_shows_reasons_and_exits_1(
     mocked_repository_safe_to_delete.return_value = [git_unneeded.Unsafe(temp_repo, "justifications", ["suggestions"])]
 
     assert 1 == main(str(temp_repo.working_dir), "--color=never")
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert "| Unsafe: justifications" in out
     assert "|   => suggestions" in out
