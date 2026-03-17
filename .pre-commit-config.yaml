@@ -1,0 +1,32 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.15.5
+  hooks:
+  - id: ruff-format
+    args: [--diff]
+  - id: ruff-check
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  # uv version.
+  rev: 0.10.3
+  hooks:
+    # Update the uv lockfile
+    - id: uv-lock
+
+- repo: local
+  hooks:
+    - id: cog-readme
+      name: Verify version in README.md
+      entry: uv tool run --with gitpython==3.1.46 --with 'argparse-help-markdown>=0.1.4' --from cogapp cog --check --diff --check-fail-msg "Version in README.md needs to be updated; uv tool run --with gitpython==3.1.46 --with 'argparse-help-markdown>=0.1.4' --from cogapp cog -rUP -- README.md" --verbosity 1 -UP -- README.md
+      language: system
+      always_run: true
+      stages: [pre-commit]
+      pass_filenames: false
