@@ -1,6 +1,6 @@
 [project]
 name = "git-unneeded"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Determine whether we don't need this clone (or some of its branches) anymore."
 readme = "README.md"
 requires-python = ">=3.12"
