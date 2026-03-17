@@ -97,7 +97,7 @@ class Safe:
 class Unsafe(Safe):
     @property
     def _major_color(self) -> str:
-        return Colors.GREEN
+        return Colors.BOLD_RED
 
 
 def prune_probability_key(branch: git.Head) -> int:
