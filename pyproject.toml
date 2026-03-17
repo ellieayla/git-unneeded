@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-git-fork = "git_unneeded:main"
+git-unneeded = "git_unneeded:main"
 
 [build-system]
 requires = ["setuptools >= 80.0", "setuptools-scm[simple]>=8"]
