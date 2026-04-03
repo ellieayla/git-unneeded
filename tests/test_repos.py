@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from git import Repo
 
 import git_unneeded
@@ -149,3 +150,28 @@ def test_local_branch_unknown_to_remote(cloned_repo: Repo) -> None:
                 assert "branch localbranch is not known to remotes" in r.reason
                 assert "has commits" in r.reason
                 assert git_unneeded.describe_commit_one_line(local_commit) in r.suggestions
+
+
+def test_upstream_is_gone(cloned_repo: Repo) -> None:
+    """Issue #1"""
+    tmp_path = Path(cloned_repo.working_dir).parent
+
+    # Squash commits from new-b onto main, similar to GitLab's merge-with-squash option
+    remote_git_repo = Repo(tmp_path / "Upstream")
+    remote_git_repo.git.execute(["git", "merge", "--squash", "new-b"])
+    remote_git_repo.git.execute(["git", "commit", "--all", "-m", "squashed new-b into main"])
+
+    # Deleting like vvv doesn't result in the state where "... but the upstream is gone" is seen.
+    # remote_git_repo.delete_head("new-b", force=True)  # git branch -D new-b
+
+    cloned_repo.refs["main"].checkout()
+    pil = cloned_repo.remote("origin").push("new-b", delete=True)
+    assert pil[0].summary == "[deleted]\n"  # delete remote ref
+
+    switch_result = cloned_repo.git.switch("new-b")
+    assert "but the upstream is gone" in switch_result
+
+    with pytest.raises(ValueError) as e:
+        _reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
+
+    assert e.value.args[0] == "Reference at 'refs/remotes/origin/new-b' does not exist"
