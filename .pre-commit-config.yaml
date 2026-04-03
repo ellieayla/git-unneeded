@@ -21,6 +21,12 @@ repos:
     # Update the uv lockfile
     - id: uv-lock
 
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.11
+  hooks:
+    - id: actionlint
+      args: [-pyflakes=, -ignore, SC2086.*Double quote]
+
 - repo: local
   hooks:
     - id: cog-readme

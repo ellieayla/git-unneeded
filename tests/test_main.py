@@ -1,6 +1,5 @@
 import sys
 from collections.abc import Iterable
-from contextlib import nullcontext
 from dataclasses import dataclass
 from itertools import tee
 from pathlib import Path
@@ -61,9 +60,6 @@ def assert_same_as[T](value: T, iterable: Iterable[T]) -> None:
 @pytest.mark.parametrize(("value", "not_that"), [(True, False), (False, 5)])
 def test_verify_assert_same_as_helper_fn(value: bool | int, not_that: bool | int) -> None:
     assert_same_as(value, [not_that])
-
-
-produces = nullcontext  # stand-in for pytest.raises(...) which returns its argument
 
 
 def test_verify_mocked_repository_safe_to_delete_fixture(mocked_repository_safe_to_delete: mock.Mock) -> None:

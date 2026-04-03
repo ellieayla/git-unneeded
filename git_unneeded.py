@@ -190,10 +190,7 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
             yield Safe(
                 repo,
                 f"Local branch {b.path} cites {tracking_branch.path}",
-                suggestions=[
-                    f"{e}.",
-                    "It was probably deleted from the remote. If so, delete the local branch."
-                ]
+                suggestions=[f"{e}.", "It was probably deleted from the remote. If so, delete the local branch."],
             )
             continue
 
