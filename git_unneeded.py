@@ -24,6 +24,7 @@ from textwrap import indent
 from typing import IO
 
 import git
+from git.exc import GitCommandError
 
 logger = logging.getLogger()
 
@@ -116,6 +117,18 @@ def describe_commit_one_line(c: git.Commit) -> str:
     return f"{c.hexsha} {c.committed_datetime} {c.committer}: {str(c.summary)}"
 
 
+def git_stderr_to_list(stderr: str) -> list[str]:
+    """
+    gitpython will raise GitCommandError exceptions with stdout/stderr formatting baked in.
+    Extract the values again.
+    """
+    if stderr.startswith("\n  stderr: '") and stderr.endswith("'"):
+        inside = stderr[12:-1]
+        return inside.splitlines()
+
+    return [stderr]
+
+
 def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[Safe | Unsafe, None, None]:
     repo_logger = logger.getChild(str(repo.git_dir))
 
@@ -131,7 +144,10 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
             # fetch up to date information for each remote.
             # this might download data. Oh well.
             repo_logger.info(f"Fetching remote {r=}")
-            r.fetch(verbose=True)  # needs network access to update
+            try:
+                r.fetch(verbose=True)  # needs network access to update
+            except GitCommandError as e:
+                yield Unsafe(repo, f"Failed to fetch remote {r}", suggestions=git_stderr_to_list(e.stderr))
 
     pretend_deleted_local_branches: list[git.Head] = []
 

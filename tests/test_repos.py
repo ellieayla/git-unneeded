@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from git import RemoteReference, Repo
+from git import Remote, RemoteReference, Repo
 
 import git_unneeded
-from git_unneeded import Safe, Unsafe, repository_safe_to_delete
+from git_unneeded import Safe, Unsafe, git_stderr_to_list, repository_safe_to_delete
 
 
 def test_repo_has_dirty_working_directory(temp_repo: Repo) -> None:
@@ -183,3 +183,30 @@ def test_upstream_is_gone(cloned_repo: Repo) -> None:
 
     reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
     assert "It was probably deleted" in str(reasons[0])
+
+
+def test_unreachable_remote(temp_repo: Repo) -> None:
+    remote = Remote.add(repo=temp_repo, name="remote-does-not-exist", url="../remote-does-not-exist")
+    print(remote)
+    reasons = list(repository_safe_to_delete(temp_repo, fetch=True))
+
+    assert isinstance(reasons[0], Unsafe)
+    assert "does not appear to be a git repository" in str(reasons[0])
+    print(reasons[0])
+
+    reasons_without_fetch = list(repository_safe_to_delete(temp_repo, fetch=False))
+    assert reasons_without_fetch == []
+
+
+@pytest.mark.parametrize(
+    ("original", "expected"),
+    [
+        (
+            "\n  stderr: 'fatal: '..' does not appear to be a git repository\nfatal: Boo.'",
+            ["fatal: '..' does not appear to be a git repository", "fatal: Boo."],
+        ),
+        ("bleh", ["bleh"]),
+    ],
+)
+def test_git_stderr_to_list(original: str, expected: list[str]) -> None:
+    assert git_stderr_to_list(original) == expected
