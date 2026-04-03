@@ -151,6 +151,9 @@ def test_local_branch_unknown_to_remote(cloned_repo: Repo) -> None:
                 assert "has commits" in r.reason
                 assert git_unneeded.describe_commit_one_line(local_commit) in r.suggestions
 
+            case classname, r:  # pragma: no cover
+                raise ValueError(f"Unexpected reason class {classname}: {r}")
+
 
 def test_upstream_is_gone(cloned_repo: Repo) -> None:
     """Issue #1"""
