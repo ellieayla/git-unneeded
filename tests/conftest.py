@@ -70,7 +70,7 @@ def cloned_repo(tmp_path: Path) -> Iterable[Repo]:
     upstream_path = tmp_path / "Upstream"
     upstream_path.mkdir()
 
-    repo = Repo.init(upstream_path)
+    repo = Repo.init(upstream_path, initial_branch="main")
 
     original_branch = repo.active_branch
 
