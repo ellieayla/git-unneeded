@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from git import Repo
+from git import RemoteReference, Repo
 
 import git_unneeded
 from git_unneeded import Safe, Unsafe, repository_safe_to_delete
@@ -165,7 +165,18 @@ def test_upstream_is_gone(cloned_repo: Repo) -> None:
     switch_result = cloned_repo.git.switch("new-b")
     assert "but the upstream is gone" in switch_result
 
-    with pytest.raises(ValueError) as e:
-        _reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
+    new_b = cloned_repo.branches["new-b"]
+    tracking_branch = new_b.tracking_branch()
 
+    assert isinstance(tracking_branch, RemoteReference)
+    assert tracking_branch.path == "refs/remotes/origin/new-b"
+
+    with pytest.raises(ValueError):
+        tracking_branch.commit
+
+    with pytest.raises(ValueError) as e:
+        tracking_branch.dereference_recursive(tracking_branch.repo, tracking_branch.path)
     assert e.value.args[0] == "Reference at 'refs/remotes/origin/new-b' does not exist"
+
+    reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
+    assert "It was probably deleted" in str(reasons[0])
