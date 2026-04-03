@@ -1,7 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from git import Repo
+import pytest
+from git import RemoteReference, Repo
 
 import git_unneeded
 from git_unneeded import Safe, Unsafe, repository_safe_to_delete
@@ -149,3 +150,33 @@ def test_local_branch_unknown_to_remote(cloned_repo: Repo) -> None:
                 assert "branch localbranch is not known to remotes" in r.reason
                 assert "has commits" in r.reason
                 assert git_unneeded.describe_commit_one_line(local_commit) in r.suggestions
+
+
+def test_upstream_is_gone(cloned_repo: Repo) -> None:
+    """Issue #1"""
+
+    # Deleting like vvv doesn't result in the state where "... but the upstream is gone" is seen.
+    # remote_git_repo.delete_head("new-b", force=True)  # git branch -D new-b
+
+    cloned_repo.refs["main"].checkout()
+    pil = cloned_repo.remote("origin").push("new-b", delete=True)
+    assert pil[0].summary == "[deleted]\n"  # delete remote ref
+
+    switch_result = cloned_repo.git.switch("new-b")
+    assert "but the upstream is gone" in switch_result
+
+    new_b = cloned_repo.branches["new-b"]
+    tracking_branch = new_b.tracking_branch()
+
+    assert isinstance(tracking_branch, RemoteReference)
+    assert tracking_branch.path == "refs/remotes/origin/new-b"
+
+    with pytest.raises(ValueError):
+        tracking_branch.commit
+
+    with pytest.raises(ValueError) as e:
+        tracking_branch.dereference_recursive(tracking_branch.repo, tracking_branch.path)
+    assert e.value.args[0] == "Reference at 'refs/remotes/origin/new-b' does not exist"
+
+    reasons = list(repository_safe_to_delete(cloned_repo, fetch=True))
+    assert "It was probably deleted" in str(reasons[0])

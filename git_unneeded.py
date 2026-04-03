@@ -179,10 +179,22 @@ def repository_safe_to_delete(repo: git.Repo, fetch: bool = True) -> Generator[S
                 )
             continue
 
-        # branch b tracks remote branch
-        if tracking_branch.commit == b.commit:
-            # common & fast path
-            bl.info(f"Branch {b.path} and remote {tracking_branch.path} point to same commit {b.commit}")
+        try:
+            # branch b tracks remote branch
+            if tracking_branch.commit == b.commit:
+                # common & fast path
+                bl.info(f"Branch {b.path} and remote {tracking_branch.path} point to same commit {b.commit}")
+                continue
+        except ValueError as e:
+            bl.info(f"Branch {b.path} cites {tracking_branch.path}, but {tracking_branch.path} isn't known. It was probably deleted: {e}")
+            yield Safe(
+                repo,
+                f"Local branch {b.path} cites {tracking_branch.path}",
+                suggestions=[
+                    f"{e}.",
+                    "It was probably deleted from the remote. If so, delete the local branch."
+                ]
+            )
             continue
 
         bl.info(f"Local branch {b.path} points to commit {b.commit}")
