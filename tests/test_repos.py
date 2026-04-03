@@ -154,12 +154,6 @@ def test_local_branch_unknown_to_remote(cloned_repo: Repo) -> None:
 
 def test_upstream_is_gone(cloned_repo: Repo) -> None:
     """Issue #1"""
-    tmp_path = Path(cloned_repo.working_dir).parent
-
-    # Squash commits from new-b onto main, similar to GitLab's merge-with-squash option
-    remote_git_repo = Repo(tmp_path / "Upstream")
-    remote_git_repo.git.execute(["git", "merge", "--squash", "new-b"])
-    remote_git_repo.git.execute(["git", "commit", "--all", "-m", "squashed new-b into main"])
 
     # Deleting like vvv doesn't result in the state where "... but the upstream is gone" is seen.
     # remote_git_repo.delete_head("new-b", force=True)  # git branch -D new-b
